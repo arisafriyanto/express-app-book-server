@@ -1,0 +1,83 @@
+nambahin script
+"db:start": "knex migrate:rollback --env production --knexfile ./dist/knexfile.js && knex migrate:latest --env production --knexfile ./dist/knexfile.js && knex seed:run --env production --knexfile ./dist/knexfile.js && node dist/server.js",
+
+ARG NODE_VERSION=18.17.0
+FROM node:${NODE_VERSION}-alpine as build-image
+
+WORKDIR /usr/src/app
+
+COPY package*.json ./
+COPY tsconfig.json ./
+
+COPY ./ ./
+
+RUN npm ci
+RUN npx tsc -p .
+
+FROM node:${NODE_VERSION}-alpine
+WORKDIR /usr/src/app
+COPY package*.json ./
+COPY --from=build-image ./usr/src/app/dist ./dist
+RUN npm ci --production
+COPY . .
+EXPOSE 3000
+
+CMD ["npm", "run", "db:start"]
+
+
+# mas agung
+
+FROM node:20-alpine
+WORKDIR /usr/src/app
+COPY package*.json ./
+COPY tsconfig.json ./
+COPY . .
+RUN npm ci
+RUN npx tsc -p .
+EXPOSE 3000
+CMD ["node", "dist/server.js"]
+
+install fly tool
+
+flyctl auth login
+fly launch
+fly deploy
+
+ambil url postgres pasang ke database.ts dan ganti juga knexfile
+
+fly open
+
+ubah config database name menjadi nama app yang di deploy
+
+# serve proxy
+fly proxy 5433:5432 --app <db_service_name>
+
+contoh: 
+fly proxy 5433:5432 --app app-server-db
+
+import type { Knex } from 'knex';
+
+// Update with your config settings.
+
+const config: Record<string, Knex.Config> = {
+  development: {
+    client: 'postgresql',
+    connection: {
+      port: 5433,
+      database: 'postgres',
+      user: 'app_server_fsw',
+      // user: 'postgres',app_server_fsw
+      password: 'AdZxrM6CnqvMH27',
+      // password: 'docker',AdZxrM6CnqvMH27
+    },
+    pool: {
+      min: 2,
+      max: 10,
+    },
+    migrations: {
+      tableName: 'knex_migrations',
+    },
+  },
+};
+
+module.exports = config;
